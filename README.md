@@ -1,6 +1,7 @@
 # local-breweries-automation-tests
 
 [![tests](https://github.com/cameronsampson/local-breweries-automation-tests/actions/workflows/tests.yml/badge.svg)](https://github.com/cameronsampson/local-breweries-automation-tests/actions/workflows/tests.yml)
+[![report](https://img.shields.io/badge/report-latest-blue)](https://cameronsampson.github.io/local-breweries-automation-tests/)
 
 Playwright automation suite for [openbrewerydb.org](https://www.openbrewerydb.org)
 and the public [OpenBreweryDB API](https://api.openbrewerydb.org). Tests run in
@@ -123,7 +124,17 @@ Every push and pull request runs `.github/workflows/tests.yml`:
 2. Typecheck with `tsc --noEmit`.
 3. Install Chromium (cached across runs by `package-lock.json` hash).
 4. Run the full Playwright suite (`npm test`).
-5. On failure, upload `playwright-report/` as an artifact (14 day retention).
+5. Upload `playwright-report/` as a workflow artifact (14 day retention) —
+   downloadable from any run page, pass or fail.
+6. On `main`, publish the same report to **GitHub Pages**:
+   <https://cameronsampson.github.io/local-breweries-automation-tests/>
+
+### Enabling Pages (one-time)
+
+Settings → Pages → **Source: GitHub Actions**. After that, every push to
+`main` updates the published report.
+
+### Overriding the location in CI
 
 The workflow's location config defaults to the values in `.env.example`. To
 test a different location in CI, add **repository variables** (Settings →

@@ -227,6 +227,10 @@ AI-assisted development**, using:
 The collaborator, Cameron Sampson, drove the requirements, design choices,
 GitHub authentication, and `Settings → Pages` configuration.
 
+For a deeper account of the workflow — the prompt → propose → execute →
+verify loop, who did what, and a chronological log of every change —
+see [`docs/ai-workflow/`](docs/ai-workflow/README.md).
+
 ## License
 
 MIT.

@@ -62,6 +62,46 @@ npm run test:ui          # Playwright UI mode
 npm run report           # open the last HTML report
 ```
 
+## Test reports
+
+Every run — local or CI — produces a [Playwright HTML report](https://playwright.dev/docs/test-reporters#html-reporter).
+There are three ways to view it depending on where the tests ran.
+
+### 1. Local
+
+After any `npm test` / `npm run test:api` / `npm run test:frontend` run, the
+report is written to `playwright-report/`. Open it with:
+
+```bash
+npm run report      # runs `playwright show-report`, opens localhost in your browser
+```
+
+### 2. CI workflow artifact (every run, every branch)
+
+The workflow uploads the same report as an artifact named **`playwright-report`**
+(14-day retention) on every run, pass or fail.
+
+1. Open the run from <https://github.com/cameronsampson/local-breweries-automation-tests/actions>.
+2. Scroll to **Artifacts** at the bottom of the run summary.
+3. Download `playwright-report.zip`, unzip, and open `index.html` in a browser.
+
+### 3. GitHub Pages (latest `main` run)
+
+The most recent run on `main` is published to:
+
+**<https://cameronsampson.github.io/local-breweries-automation-tests/>**
+
+The `report-latest` badge at the top of this README links there.
+
+### What's in the report
+
+Specs are written in BDD style — `Feature: …` for each `describe`, `Scenario: …`
+for each test, and `test.step('Given …')` / `'When …'` / `'Then …'` blocks for
+each phase of the test body. In the HTML report each step is its own
+collapsible row, so a passing run reads like a Gherkin trace and a failing
+step is pinpointed in context. Pure Playwright — no Cucumber or
+`playwright-bdd` dependency.
+
 ## Project layout
 
 ```
@@ -124,10 +164,10 @@ Every push and pull request runs `.github/workflows/tests.yml`:
 2. Typecheck with `tsc --noEmit`.
 3. Install Chromium (cached across runs by `package-lock.json` hash).
 4. Run the full Playwright suite (`npm test`).
-5. Upload `playwright-report/` as a workflow artifact (14 day retention) —
-   downloadable from any run page, pass or fail.
-6. On `main`, publish the same report to **GitHub Pages**:
-   <https://cameronsampson.github.io/local-breweries-automation-tests/>
+5. Upload the HTML report as the `playwright-report` artifact (14-day retention).
+6. On `main`, publish the same report to GitHub Pages.
+
+See [Test reports](#test-reports) above for the three ways to view the output.
 
 ### Enabling Pages (one-time)
 
@@ -141,6 +181,21 @@ test a different location in CI, add **repository variables** (Settings →
 Secrets and variables → Actions → Variables) named `USER_LATITUDE`,
 `USER_LONGITUDE`, `USER_COUNTRY`, `USER_CITIES`, `MAX_DISTANCE_KM`, or
 `NEAREST_COUNT` — the workflow picks them up automatically.
+
+## Built with AI
+
+This project — repository structure, test architecture, page objects, API
+client, BDD scenario rewrite, GitHub Actions workflow, GitHub Pages publishing,
+and the companion `/brewery-tests` Claude skill — was created **100% with
+AI-assisted development**, using:
+
+- **[Claude Opus 4.7](https://www.anthropic.com/claude)** in
+  **[Claude Code](https://claude.com/claude-code)** as the development agent.
+- **[Playwright CLI](https://playwright.dev)** (`@playwright/test`) as the
+  test runner, providing fixtures, the HTML reporter, and browser tooling.
+
+The human collaborator drove the requirements, design choices, GitHub
+authentication, and `Settings → Pages` configuration.
 
 ## License
 

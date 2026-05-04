@@ -1,5 +1,7 @@
 # local-breweries-automation-tests
 
+[![tests](https://github.com/cameronsampson/local-breweries-automation-tests/actions/workflows/tests.yml/badge.svg)](https://github.com/cameronsampson/local-breweries-automation-tests/actions/workflows/tests.yml)
+
 Playwright automation suite for [openbrewerydb.org](https://www.openbrewerydb.org)
 and the public [OpenBreweryDB API](https://api.openbrewerydb.org). Tests run in
 two Playwright projects (`frontend`, `api`) and are organised with the **Page
@@ -112,6 +114,22 @@ coordinates — name a place without coords and it will ask for them.
 OpenBreweryDB exposes `by_dist=lat,lng` to **sort** by distance but has no
 "within N km" filter. The suite fetches the nearest results and asserts the
 distance locally with the haversine formula — no third-party geo deps.
+
+## CI
+
+Every push and pull request runs `.github/workflows/tests.yml`:
+
+1. Install deps via `npm ci` (with npm cache).
+2. Typecheck with `tsc --noEmit`.
+3. Install Chromium (cached across runs by `package-lock.json` hash).
+4. Run the full Playwright suite (`npm test`).
+5. On failure, upload `playwright-report/` as an artifact (14 day retention).
+
+The workflow's location config defaults to the values in `.env.example`. To
+test a different location in CI, add **repository variables** (Settings →
+Secrets and variables → Actions → Variables) named `USER_LATITUDE`,
+`USER_LONGITUDE`, `USER_COUNTRY`, `USER_CITIES`, `MAX_DISTANCE_KM`, or
+`NEAREST_COUNT` — the workflow picks them up automatically.
 
 ## License
 

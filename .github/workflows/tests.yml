@@ -1,0 +1,74 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Playwright (frontend + api)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Location config — .env is gitignored, so CI provides values inline.
+    # Override any of these by adding repo-level Variables of the same name
+    # under Settings → Secrets and variables → Actions → Variables.
+    env:
+      SITE_URL: ${{ vars.SITE_URL || 'https://www.openbrewerydb.org' }}
+      API_URL: ${{ vars.API_URL || 'https://api.openbrewerydb.org' }}
+      USER_LATITUDE: ${{ vars.USER_LATITUDE || '37.7749' }}
+      USER_LONGITUDE: ${{ vars.USER_LONGITUDE || '-122.4194' }}
+      USER_COUNTRY: ${{ vars.USER_COUNTRY || 'United States' }}
+      USER_CITIES: ${{ vars.USER_CITIES || 'San Francisco' }}
+      MAX_DISTANCE_KM: ${{ vars.MAX_DISTANCE_KM || '40' }}
+      NEAREST_COUNT: ${{ vars.NEAREST_COUNT || '5' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system deps
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Run tests
+        run: npm test
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() && failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

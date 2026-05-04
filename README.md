@@ -194,8 +194,8 @@ AI-assisted development**, using:
 - **[Playwright CLI](https://playwright.dev)** (`@playwright/test`) as the
   test runner, providing fixtures, the HTML reporter, and browser tooling.
 
-The human collaborator drove the requirements, design choices, GitHub
-authentication, and `Settings → Pages` configuration.
+The collaborator, Cameron Sampson, drove the requirements, design choices,
+GitHub authentication, and `Settings → Pages` configuration.
 
 ## License
 

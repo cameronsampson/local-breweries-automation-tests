@@ -13,11 +13,25 @@ Object Model**.
 | # | Type | Scenario |
 |---|------|----------|
 | 1 | Frontend (UI) | `openbrewerydb.org` is reachable, returns 2xx, renders, and mentions breweries. |
-| 2 | Backend (API) | The 5 closest breweries to your configured coordinates are all within 40 km (haversine). |
-| 3 | Backend (API) | The country and city of those 5 closest breweries match your configured country / city list. |
+| 2 | Backend (API) | For each curated location, the 5 closest breweries are all within 40 km (haversine, computed locally). |
+| 3 | Backend (API) | For each curated location, the country (and city, where applicable) of those 5 breweries match the location's expected country / city list. |
 
-The "5", "40 km", country, city, and coordinates are all driven by `.env` so the
-suite is portable.
+Each API scenario is **parameterised over a curated set of 8 locations**
+covering both the US and international markets, plus an optional 9th
+"Custom" location injected from `.env`. Tests run with **Playwright's
+parallel runner (5 workers by default)** so the full API suite finishes in
+~2-3 seconds.
+
+### Curated locations
+
+| Region | Locations |
+|--------|-----------|
+| **United States** | San Francisco, Portland (OR), Denver (CO), Asheville (NC), Austin (TX) |
+| **International** | Dublin (Ireland), Singapore, Seoul (South Korea — country-only assertion) |
+
+The list lives in `src/config/locations.ts`. Add or remove entries there;
+each entry sets its own latitude/longitude, expected country, optional list
+of acceptable cities, and radius.
 
 ## Prerequisites
 
@@ -32,35 +46,47 @@ git clone <your-fork-url> local-breweries-automation-tests
 cd local-breweries-automation-tests
 npm install
 npm run install:browsers     # one-time Chromium download
-cp .env.example .env         # then edit .env with your location
+cp .env.example .env         # only needed if you want a custom location
 ```
 
-## Configure your location
+## Configure (optional)
 
-Edit `.env`:
+`.env` is **not required** — the suite ships with 8 curated locations that
+all pass out of the box. Set `USER_LATITUDE` and `USER_LONGITUDE` only if
+you want to **add** your own location to the run as a 9th "Custom" entry:
 
 ```env
-USER_LATITUDE=37.7749
-USER_LONGITUDE=-122.4194
-USER_COUNTRY=United States
-USER_CITIES=San Francisco
+USER_LATITUDE=49.2827
+USER_LONGITUDE=-123.1207
+USER_COUNTRY=Canada
+USER_CITIES=Vancouver
+USER_LOCATION_NAME=Vancouver, BC (CA)
 MAX_DISTANCE_KM=40
 NEAREST_COUNT=5
 ```
 
-`USER_CITIES` is a comma-separated list — useful if your 40 km radius spills
-into neighbouring municipalities (e.g. `San Francisco,Oakland,Berkeley`).
+`USER_CITIES` is a comma-separated list — leave empty to skip the
+city-match assertion for the custom entry. To increase parallelism, also
+set `PLAYWRIGHT_WORKERS=<n>` (default 5).
 
 ## Run
 
 ```bash
-npm test                 # all projects
-npm run test:frontend    # UI suite only
-npm run test:api         # API suite only
-npm run test:headed      # UI suite with visible browser
-npm run test:ui          # Playwright UI mode
-npm run report           # open the last HTML report
+npm test                                      # all projects (frontend + 16+ API tests)
+npm run test:api                              # API suite only — ~2-3 s with 5 workers
+npm run test:frontend                         # UI suite only
+npm run test:headed                           # UI suite with visible browser
+npm run test:ui                               # Playwright UI mode
+npm run test:api -- --grep "Portland"         # filter to one location
+npm run test:api -- --grep "United States"    # filter to all US locations
+PLAYWRIGHT_WORKERS=8 npm run test:api         # crank up parallelism
+npm run report                                # open the last HTML report
 ```
+
+The `api` project runs **fully in parallel**: every (location × scenario)
+pair is an independent test, so 4-5 agents (or any concurrent CI runs) can
+execute the suite without contention. The default worker count is 5; tune
+with `PLAYWRIGHT_WORKERS`.
 
 ## Test reports
 
@@ -111,7 +137,7 @@ step is pinpointed in context. Pure Playwright — no Cucumber or
 │   ├── pages/HomePage.ts         # POM for openbrewerydb.org
 │   ├── api/BreweryApi.ts         # API client wrapper
 │   ├── utils/distance.ts         # haversine
-│   └── config/location.ts        # .env -> typed config
+│   └── config/locations.ts       # curated locations + optional .env-derived custom entry
 └── tests/
     ├── frontend/homepage.spec.ts
     └── api/
@@ -139,16 +165,19 @@ session.
 ### Usage
 
 ```
-/brewery-tests                                           # API suite, .env defaults
-/brewery-tests all                                       # full suite
-/brewery-tests frontend                                  # UI only
-/brewery-tests lat=45.5152 lng=-122.6784 country="United States" city=Portland
-/brewery-tests all city="Portland,Beaverton" radius=60 lat=45.5152 lng=-122.6784
+/brewery-tests                                              # API suite, every curated location, parallel
+/brewery-tests all                                          # frontend + every curated location
+/brewery-tests frontend                                     # UI only
+/brewery-tests grep="Portland"                              # filter to the Portland scenarios
+/brewery-tests grep="United States"                         # filter to all US locations
+/brewery-tests workers=8                                    # bump parallelism to 8 workers
+/brewery-tests lat=49.2827 lng=-123.1207 country="Canada" city=Vancouver name="Vancouver, BC"
+                                                            #   ↑ adds a 9th "Custom" location alongside the curated 8
 ```
 
-Overrides set environment variables for the test run; the project's `.env`
-provides the defaults for anything you don't pass. The skill never invents
-coordinates — name a place without coords and it will ask for them.
+Overrides set environment variables for that specific test run. The skill
+never invents coordinates — name a place without coords and it will use a
+`grep` filter (if it matches a curated location) or ask for the lat/lng.
 
 ## Notes on the API
 
@@ -174,13 +203,14 @@ See [Test reports](#test-reports) above for the three ways to view the output.
 Settings → Pages → **Source: GitHub Actions**. After that, every push to
 `main` updates the published report.
 
-### Overriding the location in CI
+### Adding a custom location in CI
 
-The workflow's location config defaults to the values in `.env.example`. To
-test a different location in CI, add **repository variables** (Settings →
-Secrets and variables → Actions → Variables) named `USER_LATITUDE`,
-`USER_LONGITUDE`, `USER_COUNTRY`, `USER_CITIES`, `MAX_DISTANCE_KM`, or
-`NEAREST_COUNT` — the workflow picks them up automatically.
+The workflow runs the curated 8 locations on every push. To **add** a 9th
+custom location to CI, define repository **Variables** (Settings → Secrets
+and variables → Actions → Variables): `USER_LATITUDE`, `USER_LONGITUDE`,
+`USER_COUNTRY`, `USER_CITIES`, `USER_LOCATION_NAME`, `MAX_DISTANCE_KM`, or
+`NEAREST_COUNT`. The workflow picks them up automatically and runs the
+extra location alongside the curated set.
 
 ## Built with AI
 
